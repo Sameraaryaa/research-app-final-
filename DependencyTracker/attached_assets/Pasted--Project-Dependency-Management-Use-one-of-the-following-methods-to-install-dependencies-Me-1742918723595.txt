@@ -1,0 +1,145 @@
+# Project Dependency Management
+# Use one of the following methods to install dependencies:
+
+# Method 1: Poetry Package Management
+# ```
+# poetry init
+# poetry add numpy tensorflow matplotlib keras scikit-learn
+# ```
+
+# Method 2: Universal Package Manager (UPM)
+# ```
+# upm add numpy tensorflow matplotlib keras scikit-learn
+# ```
+
+# Python Implementation
+import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+import matplotlib.pyplot as plt
+
+# Seed for reproducibility
+np.random.seed(42)
+tf.random.set_seed(42)
+
+class CapsuleLayer(layers.Layer):
+    def __init__(self, num_capsules, capsule_dim, routing_iterations=3, **kwargs):
+        super(CapsuleLayer, self).__init__(**kwargs)
+        self.num_capsules = num_capsules
+        self.capsule_dim = capsule_dim
+        self.routing_iterations = routing_iterations
+
+    def build(self, input_shape):
+        self.W = self.add_weight(
+            shape=(1, input_shape[1], self.num_capsules, self.capsule_dim, input_shape[2]),
+            initializer='glorot_uniform',
+            trainable=True,
+            name='routing_weights'
+        )
+        self.built = True
+
+    def call(self, inputs):
+        # Simplified capsule layer implementation
+        transformed_inputs = tf.matmul(inputs, self.W)
+        return transformed_inputs
+
+def create_capsule_network(input_shape=(32, 32, 3), num_classes=10):
+    inputs = keras.Input(shape=input_shape)
+    
+    # Convolutional layers
+    x = layers.Conv2D(64, (3, 3), activation='relu')(inputs)
+    x = layers.MaxPooling2D()(x)
+    
+    # Capsule layer
+    x = layers.Flatten()(x)
+    capsules = CapsuleLayer(num_capsules=num_classes, capsule_dim=16)(x)
+    
+    # Output layer
+    outputs = layers.Dense(num_classes, activation='softmax')(capsules)
+    
+    model = keras.Model(inputs=inputs, outputs=outputs)
+    model.compile(
+        optimizer='adam',
+        loss='categorical_crossentropy',
+        metrics=['accuracy']
+    )
+    
+    return model
+
+def prepare_dataset():
+    # Load dataset
+    (x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
+    
+    # Preprocess data
+    x_train = x_train.astype('float32') / 255.0
+    x_test = x_test.astype('float32') / 255.0
+    
+    # One-hot encode labels
+    y_train = keras.utils.to_categorical(y_train, 10)
+    y_test = keras.utils.to_categorical(y_test, 10)
+    
+    return (x_train, y_train), (x_test, y_test)
+
+def train_capsule_network():
+    # Prepare dataset
+    (x_train, y_train), (x_test, y_test) = prepare_dataset()
+    
+    # Create model
+    model = create_capsule_network()
+    
+    # Train model
+    history = model.fit(
+        x_train, y_train, 
+        validation_data=(x_test, y_test),
+        epochs=5,  # Reduced for faster execution
+        batch_size=64,
+        verbose=1
+    )
+    
+    # Evaluate model
+    test_loss, test_acc = model.evaluate(x_test, y_test, verbose=0)
+    print(f"\nTest accuracy: {test_acc * 100:.2f}%")
+    
+    # Visualization (optional)
+    plt.figure(figsize=(12, 4))
+    
+    plt.subplot(1, 2, 1)
+    plt.plot(history.history['accuracy'])
+    plt.plot(history.history['val_accuracy'])
+    plt.title('Model Accuracy')
+    plt.ylabel('Accuracy')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Validation'], loc='lower right')
+    
+    plt.subplot(1, 2, 2)
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('Model Loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Validation'], loc='upper right')
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return model
+
+# Dependency Installation Instructions
+def install_dependencies():
+    print("Dependency Installation Methods:")
+    print("1. Poetry: poetry add numpy tensorflow matplotlib keras")
+    print("2. UPM: upm add numpy tensorflow matplotlib keras")
+    print("3. Pip: pip install numpy tensorflow matplotlib keras")
+
+# Main execution
+if __name__ == '__main__':
+    # Check and install dependencies if needed
+    install_dependencies()
+    
+    # Train the Capsule Network
+    trained_model = train_capsule_network()
+    
+    # Optional: Save the model
+    trained_model.save('capsule_network_model.h5')
+    print("Model saved successfully!")
